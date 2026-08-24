@@ -1,6 +1,6 @@
 import os
 import requests
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI(title="MiPasarela IA (Venice-Powered)", version="1.0")
@@ -18,14 +18,16 @@ def home():
     return {"status": "online", "message": "Tu pasarela de IA privada está activa y operando con éxito."}
 
 @app.post("/v1/chat/completions")
-def proxy_chat(payload: ChatRequest, authorization: Header(None) = None):
+def proxy_chat(payload: ChatRequest):
     headers = {
         "Authorization": f"Bearer {VENICE_MASTER_KEY}",
         "Content-Type": "application/json"
     }
 
     try:
-        response = requests.post(VENICE_API_URL, headers=headers, json=payload.dict())
+        # Usamos model_dump() si es Pydantic v2, o dict() por compatibilidad
+        payload_data = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+        response = requests.post(VENICE_API_URL, headers=headers, json=payload_data)
         return response.json()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error conectando al motor de IA: {str(e)}")
